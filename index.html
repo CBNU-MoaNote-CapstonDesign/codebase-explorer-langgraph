@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini ChatGPT</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; }
+    #chatbox { max-width: 600px; margin: 20px auto; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+    #messages { height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; }
+    .message { margin: 5px 0; }
+    .user { color: blue; }
+    .assistant { color: green; }
+    input { width: 80%; padding: 8px; }
+    button { padding: 8px 12px; }
+  </style>
+</head>
+<body>
+<div id="chatbox">
+    <h2>Mini ChatGPT</h2>
+    <div id="messages"></div>
+    <input id="userInput" type="text" placeholder="메시지를 입력하세요..." />
+    <button id="sendBtn">전송</button>
+    <button id="resetBtn">대화 초기화</button> <!-- 추가된 버튼 -->
+</div>
+
+  <!-- 외부 JS 연결 -->
+  <script src="chat.js"></script>
+</body>
+</html>

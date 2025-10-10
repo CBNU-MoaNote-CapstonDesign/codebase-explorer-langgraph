@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "outDir": "dist",
+    "baseUrl": "src",
+    "paths": {
+      "@config/*": ["config/*"],
+      "@core/*": ["core/*"],
+      "@ast/*": ["ast/*"],
+      "@prune/*": ["prune/*"],
+      "@code/*": ["code/*"],
+      "@graph/*": ["graph/*"],
+      "@server/*": ["server/*"]
+    }
+  },
+  "include": ["index.ts", "src/**/*.ts"]
+}
