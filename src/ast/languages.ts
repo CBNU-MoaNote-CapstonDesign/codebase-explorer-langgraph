@@ -1,7 +1,10 @@
+import { env } from '../config/env.js';
 import JavaScript from 'tree-sitter-javascript';
 import TypeScript from 'tree-sitter-typescript';
 import HTML from 'tree-sitter-html';
 import CSS from 'tree-sitter-css';
+import C from 'tree-sitter-c';
+import CPP from 'tree-sitter-cpp';
 
 /**
  * 파일 확장자를 tree-sitter 언어로 매핑합니다.
@@ -22,6 +25,21 @@ export function getLanguageByExt(ext: string): any | null {
       return HTML;
     case '.css':
       return CSS;
+          // C (소스/헤더)
+    case '.c':
+      return C;
+    case '.h':
+      return env.C_HEADER_AS_CPP ? CPP : C; // 환경변수로 기본 해석 선택
+
+    // C++ (소스/헤더)
+    case '.cc':
+    case '.cpp':
+    case '.cxx':
+      return CPP;
+    case '.hh':
+    case '.hpp':
+    case '.hxx':
+      return CPP;
     default:
       return null;
   }

@@ -56,6 +56,8 @@ export const env = {
   OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-5-mini',
 
   PORT: Number(process.env.PORT || 3000),
+
+  C_HEADER_AS_CPP: envFlag(process.env.C_HEADER_AS_CPP, false),
 };
 
 export default env;
