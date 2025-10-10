@@ -1,1 +1,0 @@
-[{"file":"project/src/index.ts","ast":[{"type":"function","name":"foo","params":[]}]},{"file":"project/src/util.ts","ast":[{"type":"function","name":"sum","params":["a","b"]}]}]

@@ -2,11 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node","jest"],
     "outDir": "dist",
     "baseUrl": "src",
     "paths": {
@@ -19,5 +19,5 @@
       "@server/*": ["server/*"]
     }
   },
-  "include": ["index.ts", "src/**/*.ts"]
+  "include": ["index.ts", "__tests__", "src/**/*.ts", "src"],
 }
