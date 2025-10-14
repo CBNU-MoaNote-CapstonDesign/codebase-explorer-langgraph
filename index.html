@@ -1,29 +1,275 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>Mini ChatGPT</title>
-  <style>
-    body { font-family: sans-serif; background: #f5f5f5; }
-    #chatbox { max-width: 600px; margin: 20px auto; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
-    #messages { height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; }
-    .message { margin: 5px 0; }
-    .user { color: blue; }
-    .assistant { color: green; }
-    input { width: 80%; padding: 8px; }
-    button { padding: 8px 12px; }
-  </style>
-</head>
-<body>
-<div id="chatbox">
-    <h2>Mini ChatGPT</h2>
-    <div id="messages"></div>
-    <input id="userInput" type="text" placeholder="메시지를 입력하세요..." />
-    <button id="sendBtn">전송</button>
-    <button id="resetBtn">대화 초기화</button> <!-- 추가된 버튼 -->
-</div>
+ <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LangGraph Q&A Workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/site.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.1/marked.min.js" integrity="sha384-A/xgXbrnvp0TP0ecS9fF4/523O9VhffRroWVGFBWtYGVwTjbxLQKDzz3Zhyfp/FK" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" integrity="sha384-B1+YdS+yS603AbZX8nk2NQMzFJmy49XWzmkskUymNvSjt35XHYoHhGJR2NvtyGWq" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div class="gradient"></div>
+    <main class="app" aria-live="polite">
+      <header class="hero" role="banner">
+        <div class="hero__title">
+          <p class="eyebrow">Codebase Explorer</p>
+          <h1>LangGraph Q&amp;A Workspace</h1>
+        </div>
+        <p class="hero__subtitle">
+          코드베이스에 대해 궁금한 점을 물어보세요. LangGraph 파이프라인이 AST를 기반으로 답변과 후속 질문, 참고 파일을 제공합니다.
+        </p>
+      </header>
 
-  <!-- 외부 JS 연결 -->
-  <script src="chat.js"></script>
-</body>
+      <section class="card" aria-labelledby="ask-title">
+        <div class="card__header">
+          <h2 id="ask-title">질문하기</h2>
+          <span class="badge badge--mode" id="mode-badge" hidden></span>
+        </div>
+        <form id="ask-form" class="ask" autocomplete="off">
+          <label for="question" class="sr-only">질문 내용</label>
+          <textarea
+            id="question"
+            class="ask__input"
+            name="question"
+            placeholder="예: 최근 변경된 API 라우트와 연관된 테스트 파일이 있을까?"
+            rows="3"
+            required
+          ></textarea>
+          <div class="ask__actions">
+            <button type="submit" class="primary" id="ask-button">
+              <span class="label-default">질문 보내기</span>
+              <span class="label-loading" aria-hidden="true">
+                <span class="spinner" role="presentation"></span>
+                LangGraph 실행 중...
+              </span>
+            </button>
+            <button type="button" class="ghost" id="clear-button">초기화</button>
+          </div>
+        </form>
+        <p class="hint">엔터(⌘/Ctrl + Enter)로도 질문을 보낼 수 있어요.</p>
+        <div class="status" id="status" role="status"></div>
+      </section>
+
+      <section class="card" id="results-card" aria-live="polite" hidden>
+        <div class="card__header">
+          <h2>결과</h2>
+        </div>
+        <article class="answer" id="answer" hidden>
+          <h3>답변</h3>
+          <div id="answer-body" class="prose"></div>
+        </article>
+        <article class="followups" id="followups" hidden>
+          <h3>후속 질문 제안</h3>
+          <div class="chip-group" id="followups-list"></div>
+        </article>
+        <article class="references" id="references" hidden>
+          <h3>참고한 파일</h3>
+          <ul id="references-list"></ul>
+        </article>
+        <article class="trace" id="trace" hidden>
+          <details>
+            <summary>LangGraph 실행 세부 정보 보기</summary>
+            <pre id="trace-json"></pre>
+          </details>
+        </article>
+      </section>
+    </main>
+
+    <template id="chip-template">
+      <button type="button" class="chip"></button>
+    </template>
+
+    <script type="module">
+      const form = document.getElementById('ask-form');
+      const questionInput = document.getElementById('question');
+      const askButton = document.getElementById('ask-button');
+      const clearButton = document.getElementById('clear-button');
+      const statusEl = document.getElementById('status');
+      const resultsCard = document.getElementById('results-card');
+      const answerSection = document.getElementById('answer');
+      const answerBody = document.getElementById('answer-body');
+      const followupsSection = document.getElementById('followups');
+      const followupsList = document.getElementById('followups-list');
+      const referencesSection = document.getElementById('references');
+      const referencesList = document.getElementById('references-list');
+      const traceSection = document.getElementById('trace');
+      const traceJson = document.getElementById('trace-json');
+      const modeBadge = document.getElementById('mode-badge');
+      const chipTemplate = document.getElementById('chip-template');
+
+      const statusQueue = [];
+      let statusTimeout = null;
+
+      function setStatus(message, type = 'info') {
+        statusEl.textContent = message || '';
+        statusEl.dataset.type = type;
+        statusEl.hidden = !message;
+        if (!message) return;
+        statusQueue.push({ message, type, timestamp: Date.now() });
+        if (statusTimeout) clearTimeout(statusTimeout);
+        statusTimeout = setTimeout(() => {
+          const last = statusQueue[statusQueue.length - 1];
+          if (!last) return;
+          const elapsed = Date.now() - last.timestamp;
+          if (elapsed >= 4000) {
+            statusEl.hidden = true;
+          }
+        }, 4200);
+      }
+
+      function toggleLoading(isLoading) {
+        askButton.classList.toggle('is-loading', isLoading);
+        askButton.disabled = isLoading;
+        questionInput.readOnly = isLoading;
+      }
+
+      function renderMarkdown(text) {
+        if (!text) return '';
+        if (window.DOMPurify && window.marked) {
+          return DOMPurify.sanitize(marked.parse(text));
+        }
+        return text
+          .split('\n')
+          .map((line) => `<p>${line}</p>`)
+          .join('');
+      }
+
+      function renderAnswer(answer) {
+        if (!answer) {
+          answerSection.hidden = true;
+          answerBody.innerHTML = '';
+          return;
+        }
+        answerBody.innerHTML = renderMarkdown(answer);
+        answerSection.hidden = false;
+      }
+
+      function renderFollowups(items = []) {
+        followupsList.innerHTML = '';
+        if (!items.length) {
+          followupsSection.hidden = true;
+          return;
+        }
+        for (const suggestion of items) {
+          const chip = chipTemplate.content.firstElementChild.cloneNode(true);
+          chip.textContent = suggestion;
+          chip.addEventListener('click', () => {
+            questionInput.value = suggestion;
+            questionInput.focus();
+          });
+          followupsList.appendChild(chip);
+        }
+        followupsSection.hidden = false;
+      }
+
+      function renderReferences(items = []) {
+        referencesList.innerHTML = '';
+        if (!items.length) {
+          referencesSection.hidden = true;
+          return;
+        }
+        for (const ref of items) {
+          const item = document.createElement('li');
+          item.textContent = ref;
+          referencesList.appendChild(item);
+        }
+        referencesSection.hidden = false;
+      }
+
+      function renderTrace(trace) {
+        if (!trace) {
+          traceSection.hidden = true;
+          traceJson.textContent = '';
+          return;
+        }
+        traceJson.textContent = JSON.stringify(trace, null, 2);
+        traceSection.hidden = false;
+      }
+
+      function renderMode(mode) {
+        if (!mode) {
+          modeBadge.hidden = true;
+          return;
+        }
+        const modeLabel = mode === 'full' ? 'Full Context 모드' : 'Slice 모드';
+        modeBadge.textContent = modeLabel;
+        modeBadge.dataset.mode = mode;
+        modeBadge.hidden = false;
+      }
+
+      async function handleSubmit(event) {
+        event.preventDefault();
+        const question = questionInput.value.trim();
+        if (!question) {
+          setStatus('질문을 입력해주세요.', 'warn');
+          return;
+        }
+
+        toggleLoading(true);
+        setStatus('LangGraph 실행 중...', 'info');
+
+        try {
+          const response = await fetch('/graph/ask', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ question }),
+          });
+
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || `요청 실패 (HTTP ${response.status})`);
+          }
+
+          const data = await response.json();
+          if (!data || data.ok === false) {
+            throw new Error(data?.error || 'LangGraph 실행에 실패했습니다.');
+          }
+
+          renderAnswer(data.answer);
+          renderFollowups(Array.isArray(data.followups) ? data.followups : []);
+          renderReferences(Array.isArray(data.wantFiles) ? data.wantFiles : []);
+          renderTrace(data.trace);
+          renderMode(data.modeUsed);
+
+          resultsCard.hidden = false;
+          setStatus('LangGraph 실행이 완료되었습니다.', 'success');
+        } catch (error) {
+          console.error(error);
+          setStatus(error.message || '요청 처리 중 오류가 발생했습니다.', 'error');
+        } finally {
+          toggleLoading(false);
+        }
+      }
+
+      form.addEventListener('submit', handleSubmit);
+      form.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          handleSubmit(event);
+        }
+      });
+
+      clearButton.addEventListener('click', () => {
+        questionInput.value = '';
+        resultsCard.hidden = true;
+        renderAnswer('');
+        renderFollowups([]);
+        renderReferences([]);
+        renderTrace(null);
+        renderMode('');
+        setStatus('입력과 결과를 초기화했습니다.', 'info');
+        questionInput.focus();
+      });
+
+      questionInput.focus();
+    </script>
+  </body>
 </html>

@@ -17,6 +17,13 @@ export function startServer() {
   app.use(cors());
   app.use(bodyParser.json({ limit: '25mb' }));
 
+  const staticRoot = path.resolve(process.cwd());
+  app.use(express.static(staticRoot));
+
+  app.get('/', (_req: Request, res: Response) => {
+    res.sendFile(path.join(staticRoot, 'index.html'));
+  });
+
   /** 헬스체크 */
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ ok: true, mode: env.PROMPT_MODE, llm: !!env.OPENAI_API_KEY });
