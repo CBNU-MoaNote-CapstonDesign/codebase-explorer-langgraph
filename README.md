@@ -2,7 +2,7 @@
 
 LLM이 **필터링된 AST → 상세 AST → (선택적) 프루닝 → 코드 스니펫 → 최종 답변**까지 **능동적으로 탐색**하는 서버입니다.
 
-* **Tree-sitter**로 JS/TS/TSX/JSX/HTML/CSS를 파싱
+* **Tree-sitter**로 C/CPP/JAVA/KTS/JS/TS/TSX/JSX/HTML/CSS를 파싱
 * **LangGraph**로 탐색 플로우 구성
 * **두 단계 프롬프트**(AST 기반 소스 코드 후보 선정 → 실제 코드 스니펫 기반 답변)
 * **Pruning(가지치기)**로 불필요한 AST를 줄이고 **모델 컨텍스트 창** 고려한 소스 코드 탐색 및 수집

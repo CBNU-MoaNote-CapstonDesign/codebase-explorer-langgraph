@@ -73,6 +73,7 @@ function walkSupportedFiles(dirAbs: string): string[] {
   const exts = new Set([
     '.js', '.jsx', '.ts', '.tsx', '.html', '.css',
     '.c', '.cc', '.cpp', '.cxx', '.h', '.hh', '.hpp', '.hxx',
+    '.java', '.kt', '.kts',
   ]);
   const out: string[] = [];
   const stk = [dirAbs];

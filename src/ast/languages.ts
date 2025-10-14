@@ -5,6 +5,8 @@ import HTML from 'tree-sitter-html';
 import CSS from 'tree-sitter-css';
 import C from 'tree-sitter-c';
 import CPP from 'tree-sitter-cpp';
+import JAVA from 'tree-sitter-java';
+import Kotlin from 'tree-sitter-kotlin';
 
 /**
  * 파일 확장자를 tree-sitter 언어로 매핑합니다.
@@ -40,6 +42,11 @@ export function getLanguageByExt(ext: string): any | null {
     case '.hpp':
     case '.hxx':
       return CPP;
+    case '.java':
+      return JAVA;
+    case '.kt':
+    case '.kts':
+      return Kotlin;
     default:
       return null;
   }
