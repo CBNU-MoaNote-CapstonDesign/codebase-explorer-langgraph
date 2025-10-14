@@ -12,12 +12,16 @@ LLM이 **필터링된 AST → 상세 AST → (선택적) 프루닝 → 코드 �
 
 ## 🚀 빠른 시작
 
+### Requirements
+- node
+- npm
+
 ### 1) 설치
 
 ```bash
 npm i
-# 타입 패키지(필요 시)
-npm i -D typescript @types/node @types/express @types/cors
+# 개발 용도의 의존성 패키지(필요 시)
+npm i -D
 ```
 
 ### 2) Tree-sitter 언어
@@ -27,14 +31,36 @@ npm i -D typescript @types/node @types/express @types/cors
 이미 `tree-sitter-*` 패키지를 사용 중이라 추가 빌드는 필요 없습니다.
 만약 다른 언어를 추가하려면 해당 grammar 패키지를 설치 후 `ast/parse.ts` 의 `getLanguageByExt`에 매핑을 추가하세요.
 
-### 3) 빌드 & 실행
+### 3) 빌드
 
 ```bash
-npm run build      # "rimraf dist && tsc -p tsconfig.json"
-npm run start          # "node dist/index.js"
+npm run build      # "rm -r dist && tsc -p tsconfig.json"
 ```
 
+### 4) 세팅
+```
+# .env
+# 탐색할 프로젝트가 위치한 디렉토리
+# 예를 들어 codebase-explorer/target-project 에 위치하여있다면, `PROJECT_ROOT = ./target-project`
+PROJECT_ROOT= <codebase-explorer 프로젝트 루트 디렉토리 대비 상대 경로>
+
+
+# 프로젝트 파싱 결과가 생성될 위치 (LLM 의 추론 레퍼런스에 쓰입니다)
+# 예를 들어 `FILTERED_AST_PATH= ./filtered_ast.json` 으로 충분합니다. 해당 위치에 이미 파일이 있다면 삭제해주세요.
+FILTERED_AST_PATH= <임의의 위치>
+
+
+# API 키
+OPENAI_API_KEY= <OPENAI_API_KEY>
+```
+
+PROJECT_ROOT 에 탐색하고자 하는 프로젝트 디렉토리를 위치해주세요.
+
 ---
+### 5) 실행
+```bash
+npm run start
+```
 
 ## 🧪 cURL 예시
 
