@@ -475,6 +475,126 @@ function extractClassesCPP(root: any, code: string): ClassSig[] {
   return classes;
 }
 
+/** ---------- Python 시그니처 추출 ---------- */
+
+function getParamsPython(parametersNode: any, code: string): string[] {
+  if (!parametersNode) return [];
+
+  const raw = slice(code, parametersNode.startIndex, parametersNode.endIndex).trim();
+  if (!raw.startsWith('(') || !raw.endsWith(')')) return [];
+
+  const inner = raw.slice(1, -1);
+  if (!inner.trim()) return [];
+
+  const params: string[] = [];
+  let depth = 0;
+  let buf = '';
+
+  const pushBuf = () => {
+    const txt = buf.trim();
+    if (txt) params.push(txt);
+    buf = '';
+  };
+
+  for (const ch of inner) {
+    if (ch === ',' && depth === 0) {
+      pushBuf();
+      continue;
+    }
+
+    buf += ch;
+    if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+    else if (ch === ')' || ch === ']' || ch === '}') depth = Math.max(0, depth - 1);
+  }
+
+  pushBuf();
+  return params;
+}
+
+function extractNodeInfoPython(root: any, code: string): Array<FuncSig | ClassSig> {
+  const results: Array<FuncSig | ClassSig> = [];
+
+  const getNameText = (node: any): string | null => {
+    if (!node) return null;
+    return slice(code, node.startIndex, node.endIndex);
+  };
+
+  const toFunctionSig = (node: any): FuncSig | null => {
+    const nameNode = node?.childForFieldName?.('name');
+    if (!nameNode) return null;
+    const paramsNode = node.childForFieldName?.('parameters');
+    const params = getParamsPython(paramsNode, code);
+    return {
+      type: 'function',
+      name: getNameText(nameNode) ?? '',
+      params,
+      where: 'definition',
+    };
+  };
+
+  const toMethodSig = (node: any): MethodSig | null => {
+    const fn = toFunctionSig(node);
+    if (!fn) return null;
+    return { type: 'method', name: fn.name, params: fn.params, where: fn.where };
+  };
+
+  const handleClass = (node: any): ClassSig | null => {
+    const nameNode = node?.childForFieldName?.('name');
+    if (!nameNode) return null;
+
+    const methods: MethodSig[] = [];
+    const bodyNode = node.childForFieldName?.('body');
+    if (bodyNode) {
+      for (const ch of safeNamedChildren(bodyNode)) {
+        if (ch.type === 'function_definition') {
+          const method = toMethodSig(ch);
+          if (method) methods.push(method);
+        } else if (ch.type === 'decorated_definition') {
+          const inner = ch.childForFieldName?.('definition');
+          if (inner?.type === 'function_definition') {
+            const method = toMethodSig(inner);
+            if (method) methods.push(method);
+          }
+        }
+      }
+    }
+
+    return {
+      type: 'class',
+      name: getNameText(nameNode) ?? '',
+      methods,
+    };
+  };
+
+  const processTopLevel = (node: any) => {
+    if (!node) return;
+    if (node.type === 'function_definition') {
+      const fn = toFunctionSig(node);
+      if (fn) results.push(fn);
+    } else if (node.type === 'class_definition') {
+      const cls = handleClass(node);
+      if (cls) results.push(cls);
+    } else if (node.type === 'decorated_definition') {
+      const inner = node.childForFieldName?.('definition');
+      if (!inner) return;
+      if (inner.type === 'function_definition') {
+        const fn = toFunctionSig(inner);
+        if (fn) results.push(fn);
+      } else if (inner.type === 'class_definition') {
+        const cls = handleClass(inner);
+        if (cls) results.push(cls);
+      }
+    }
+  };
+
+  for (const node of safeNamedChildren(root)) {
+    processTopLevel(node);
+  }
+
+  return results;
+}
+
+
 /** ---------- 메인 빌드 루틴 ---------- */
 
 /**
@@ -507,6 +627,10 @@ export function parseOneForFiltered(fileAbs: string): FileIndexItem | null {
     const funcs = extractFunctionsC(tree.rootNode, code);
     const clazz = extractClassesCPP(tree.rootNode, code);
     items = [...funcs, ...clazz];
+  }
+  // Python
+  else if (ext === '.py') {
+    items = extractNodeInfoPython(tree.rootNode, code);
   }
   // HTML/CSS는 시그니처 없음 → 빈 배열
 
