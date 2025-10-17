@@ -26,7 +26,7 @@ npm i -D
 
 ### 2) Tree-sitter 언어
 
-> 현재 코드는 JS/JSX/TS/TSX/HTML/CSS 지원
+> 현재 코드는 C/CPP/JAVA/KTS/JS/TS/TSX/JSX/HTML/CSS/PY 지원 (구버전 파서를 이용하여 비교적 최근 문법은 파싱을 하지 못할 수 있습니다)
 
 이미 `tree-sitter-*` 패키지를 사용 중이라 추가 빌드는 필요 없습니다.
 만약 다른 언어를 추가하려면 해당 grammar 패키지를 설치 후 `ast/parse.ts` 의 `getLanguageByExt`에 매핑을 추가하세요.

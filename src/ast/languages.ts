@@ -7,6 +7,7 @@ import C from 'tree-sitter-c';
 import CPP from 'tree-sitter-cpp';
 import JAVA from 'tree-sitter-java';
 import Kotlin from 'tree-sitter-kotlin';
+import Python from 'tree-sitter-python';
 
 /**
  * 파일 확장자를 tree-sitter 언어로 매핑합니다.
@@ -47,6 +48,8 @@ export function getLanguageByExt(ext: string): any | null {
     case '.kt':
     case '.kts':
       return Kotlin;
+    case '.py':
+      return Python;
     default:
       return null;
   }
