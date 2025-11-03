@@ -9,6 +9,8 @@ import { GraphNodes, initialState, shouldLoop } from './nodes.js';
  */
 export const State = Annotation.Root({
   question:          Annotation<string>(),
+  projectRoot:       Annotation<string | undefined>(),
+  filteredAstPath:   Annotation<string | undefined>(),
   filteredAst:       Annotation<any | null>(),
   wantFiles:         Annotation<string[]>(),
   sliceHints:        Annotation<any | null>(),

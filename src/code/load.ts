@@ -42,9 +42,10 @@ export async function nodeLoadCodeSlices(state: GraphState): Promise<GraphState>
 
   const slices: CodeSlice[] = [];
   let totalBytes = 0;
+  const projectRoot = state.projectRoot ?? env.PROJECT_ROOT;
 
   for (const r of picked) {
-    const abs = path.resolve(env.PROJECT_ROOT, r.file);
+    const abs = path.resolve(projectRoot, r.file);
     const code = await readFileLines(abs, r.startLine, r.endLine);
     if (code == null) continue;
 

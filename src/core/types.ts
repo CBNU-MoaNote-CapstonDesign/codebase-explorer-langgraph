@@ -12,7 +12,7 @@ export interface AstNodeLite {
 
 /** 상세 AST(파일 단위) */
 export interface DetailedAst {
-  filePath: string; // PROJECT_ROOT 기준 상대 경로
+  filePath: string; // 서버 실행 위치 기준 상대 경로
   language: string; // tree-sitter 언어명
   root: AstNodeLite;
 }
@@ -26,7 +26,7 @@ export interface SliceHints {
 
 /** 코드 범위(LLM이 선택) */
 export interface CodeRange {
-  file: string;      // PROJECT_ROOT 기준 상대 경로
+  file: string;      // 서버 실행 위치 기준 상대 경로
   startLine: number; // 1-based inclusive
   endLine: number;   // 1-based inclusive
   rationale?: string;
@@ -68,6 +68,8 @@ export interface TraceBuffer {
  */
 export type GraphState = {
   question: string;
+  projectRoot?: string;
+  filteredAstPath?: string;
   filteredAst: any | null;
   wantFiles: string[];
   sliceHints: SliceHints | null;

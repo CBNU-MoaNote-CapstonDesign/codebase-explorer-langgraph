@@ -19,18 +19,24 @@ export const llm: ChatOpenAI | null = env.OPENAI_API_KEY
   : null;
 
 /**
- * 초기 상태 생성 (모드 적용)
- * @param {'slice'|'full'} promptMode 프롬프트 모드
+ * 초기 상태 생성 (모드/경로 적용)
+ * @param {{promptMode:'slice'|'full'; projectRoot?:string; filteredAstPath?:string}} options 초기 설정
  * @returns {GraphState} 초기 상태
  */
-export function initialState(promptMode: 'slice' | 'full'): GraphState {
+export function initialState(options: {
+  promptMode: 'slice' | 'full';
+  projectRoot?: string;
+  filteredAstPath?: string;
+}): GraphState {
   return {
     question: '',
+    projectRoot: options.projectRoot,
+    filteredAstPath: options.filteredAstPath,
     filteredAst: null,
     wantFiles: [],
     sliceHints: null,
     detailedAsts: [],
-    modeUsed: promptMode,
+    modeUsed: options.promptMode,
     answer: '',
     followups: [],
     _loopCount: 0,
@@ -45,6 +51,7 @@ export function initialState(promptMode: 'slice' | 'full'): GraphState {
 export class GraphNodes {
   /**
    * (요구사항 1) 간략 AST 로드
+   * - state.filteredAstPath가 지정되면 해당 경로를 사용합니다.
    * @param {GraphState} state 현재 상태
    * @returns {Promise<GraphState>} filteredAst가 주입된 새 상태
    */
@@ -54,7 +61,8 @@ export class GraphNodes {
     pickResult: (o: any) => ({ hasFiles: Array.isArray(o?.filteredAst?.files), fileCount: (o?.filteredAst?.files ?? []).length }),
   })
   static async nodeLoadFilteredAst(state: GraphState): Promise<GraphState> {
-    const filteredAst = await loadFilteredAstFile(env.FILTERED_AST_PATH);
+    const filteredAstPath = state.filteredAstPath ?? env.FILTERED_AST_PATH;
+    const filteredAst = await loadFilteredAstFile(filteredAstPath);
     return { ...state, filteredAst };
   }
 
@@ -133,6 +141,7 @@ export class GraphNodes {
    * 상세 AST 생성
    * - 입력: 요청 파일 수
    * - 출력: 파싱 성공 파일 수
+   * - state.projectRoot가 지정되면 해당 루트를 기준으로 파일을 탐색합니다.
    * @param {GraphState} state 현재 상태 (wantFiles 필요)
    * @returns {Promise<GraphState>} detailedAsts가 채워진 상태
    */
@@ -142,6 +151,7 @@ export class GraphNodes {
     pickResult: (o: any) => ({ parsed: (o?.detailedAsts ?? []).length }),
   })
   static async nodeGetDetailedAsts(state: GraphState): Promise<GraphState> {
+    const projectRoot = state.projectRoot ?? env.PROJECT_ROOT;
     const files = state.wantFiles || [];
     if (!files.length) {
       const it0 = state._trace?.iterations ?? 0;
@@ -153,13 +163,14 @@ export class GraphNodes {
     const results: any[] = [];
     const parsedFiles: string[] = [];
     for (const rel of files) {
-      const abs = path.resolve(env.PROJECT_ROOT, rel);
+      const abs = path.resolve(projectRoot, rel);
       try {
         const stat = await fs.stat(abs);
         if (!stat.isFile()) continue;
-        const ast = await parseFileToAST(abs);
+        const ast = await parseFileToAST(abs, projectRoot);
         results.push(ast);
         parsedFiles.push(ast.filePath);
+        
       } catch (e: any) {
         console.warn('Parse error:', rel, e.message);
       }
@@ -213,6 +224,7 @@ export class GraphNodes {
    * 코드 슬라이스 로드
    * - 입력: 선택된 범위 개수
    * - 출력: 로드된 슬라이스 개수
+   * - state.projectRoot가 지정되면 해당 루트에서 파일을 읽습니다.
    * @param {GraphState} state 현재 상태
    * @returns {Promise<GraphState>} codeSlices가 채워진 상태
    */

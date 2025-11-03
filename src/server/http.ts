@@ -8,6 +8,7 @@ import { env } from '../config/env.js';
 import { runGraph } from '../graph/run.js';
 import { parseFileToAST } from '../ast/parse.js';
 import { loadFilteredAst } from '../ast/parse.js';
+import { createAskSession, type AskSession } from './ask-session.js';
 
 /**
  * Express 앱을 생성하고 라우팅을 설정한 뒤 서버를 기동합니다.
@@ -61,16 +62,43 @@ export function startServer() {
 
   /** (LangGraph) 전체 흐름 — 질문 → (간략 AST) → 파일결정 → 상세 AST → PRUNE → 코드 범위 → 코드 → 답변 */
   app.post('/graph/ask', async (req: Request, res: Response) => {
-    const { question } = req.body || {};
+    const { question, projectPath } = req.body || {};
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ ok: false, error: 'question (string) is required' });
     }
+    if (!projectPath || typeof projectPath !== 'string') {
+      return res.status(400).json({ ok: false, error: 'projectPath (string) is required' });
+    }
+
+    const resolvedProjectPath = path.resolve(projectPath);
+    let session: AskSession | null = null;
+
     try {
-      const result = await runGraph(question);
+      const stat = await fs.stat(resolvedProjectPath);
+      if (!stat.isDirectory()) {
+        return res.status(400).json({ ok: false, error: 'projectPath must be a directory' });
+      }
+
+      session = await createAskSession(resolvedProjectPath);
+      const result = await runGraph(question, {
+        projectRoot: resolvedProjectPath,
+        filteredAstPath: session.filteredAstPath,
+      });
       res.json({ ok: true, ...result });
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.code === 'ENOENT') {
+        return res.status(400).json({ ok: false, error: 'projectPath does not exist' });
+      }
       console.error(e);
       res.status(500).json({ ok: false, error: String(e) });
+    } finally {
+      if (session) {
+        try {
+          await session.cleanup();
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup ask session:', cleanupError);
+        }
+      }
     }
   });
 

@@ -602,7 +602,7 @@ function extractNodeInfoPython(root: any, code: string): Array<FuncSig | ClassSi
  * @param {string} fileAbs 파일 절대 경로
  * @returns {FileIndexItem|null} 파일 인덱스 항목(없으면 null)
  */
-export function parseOneForFiltered(fileAbs: string): FileIndexItem | null {
+export function parseOneForFiltered(fileAbs: string, projectRoot: string): FileIndexItem | null {
   const ext = path.extname(fileAbs).toLowerCase();
   const lang = getLanguageByExt(ext);
   if (!lang) return null;
@@ -634,8 +634,9 @@ export function parseOneForFiltered(fileAbs: string): FileIndexItem | null {
   }
   // HTML/CSS는 시그니처 없음 → 빈 배열
 
+  const relativeRoot = path.resolve(projectRoot);
   return {
-    file: path.relative(env.PROJECT_ROOT, fileAbs).replaceAll('\\', '/'),
+    file: path.relative(relativeRoot, fileAbs).replaceAll('\\', '/'),
     lang: ext.replace('.', ''), // 간단 표기
     ast: items,
   };
@@ -652,7 +653,7 @@ export async function buildFilteredAst(projectRoot: string): Promise<FilteredAst
 
   for (const abs of filesAbs) {
     try {
-      const item = parseOneForFiltered(abs);
+      const item = parseOneForFiltered(abs, projectRoot);
       if (item) index.push(item);
     } catch (e: any) {
       console.warn(`[filtered] parse error at ${abs}: ${e?.message || e}`);
@@ -671,13 +672,14 @@ export async function buildFilteredAst(projectRoot: string): Promise<FilteredAst
 }
 
 /**
- * `FILTERED_AST_PATH` 위치에 filtered_ast를 기록합니다.
+ * filtered_ast 결과를 지정한 경로에 기록합니다.
  * @param {FilteredAst} fa 결과 모델
+ * @param {string} outputPath 저장할 파일 경로
  * @returns {Promise<void>}
  */
-export async function writeFilteredAst(fa: FilteredAst): Promise<void> {
-  await fsp.mkdir(path.dirname(env.FILTERED_AST_PATH), { recursive: true });
-  await fsp.writeFile(env.FILTERED_AST_PATH, JSON.stringify(fa, null, 2), 'utf8');
+export async function writeFilteredAst(fa: FilteredAst, outputPath: string): Promise<void> {
+  await fsp.mkdir(path.dirname(outputPath), { recursive: true });
+  await fsp.writeFile(outputPath, JSON.stringify(fa, null, 2), 'utf8');
 }
 
 /**
@@ -697,6 +699,6 @@ export async function ensureFilteredAst(): Promise<void> {
     // not exists → 생성으로 진행
   }
   const fa = await buildFilteredAst(env.PROJECT_ROOT);
-  await writeFilteredAst(fa);
+  await writeFilteredAst(fa, env.FILTERED_AST_PATH);
   console.log(`[filtered] generated at ${env.FILTERED_AST_PATH} (files=${fa.files.length})`);
 }

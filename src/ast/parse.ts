@@ -9,10 +9,14 @@ import type { AstNodeLite, DetailedAst, SliceHints } from '../core/types.js';
  * 소스 파일을 tree-sitter로 파싱하여 간결한 JSON AST를 생성합니다.
  * 각 노드에는 type/position과 최대 200자의 sample 코드가 포함됩니다.
  * @param {string} absFilePath 절대 경로의 소스 파일 경로
+ * @param {string} [projectRoot=env.PROJECT_ROOT] 상대 경로 계산에 사용할 프로젝트 루트
  * @returns {Promise<DetailedAst>} 파일 상대경로, 언어명, 루트 노드를 포함한 AST JSON
  * @throws {Error} 미지원 확장자 또는 파일 접근/파싱 에러
  */
-export async function parseFileToAST(absFilePath: string): Promise<DetailedAst> {
+export async function parseFileToAST(
+  absFilePath: string,
+  projectRoot: string = env.PROJECT_ROOT
+): Promise<DetailedAst> {
   const code = await fs.readFile(absFilePath, 'utf8');
   const parser = new Parser();
   const ext = path.extname(absFilePath).toLowerCase();
@@ -38,7 +42,9 @@ export async function parseFileToAST(absFilePath: string): Promise<DetailedAst> 
   }
 
   return {
-    filePath: path.relative(env.PROJECT_ROOT, absFilePath).replaceAll('\\', '/'),
+    filePath: path
+      .relative(path.resolve(projectRoot), absFilePath)
+      .replaceAll('\\', '/'),
     language: (lang as any).name,
     root: nodeToJSON(tree.rootNode, code),
   };

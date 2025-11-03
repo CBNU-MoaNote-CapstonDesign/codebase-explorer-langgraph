@@ -95,14 +95,14 @@ curl -s -X POST http://localhost:3000/ast/detailed \
 ```bash
 curl -s -X POST http://localhost:3000/graph/ask \
   -H "Content-Type: application/json" \
-  -d '{"question":"이 프로젝트에서 편집기 관련 컴포넌트를 모두 알려줘"}' | jq
+  -d '{"question":"이 프로젝트에서 편집기 관련 컴포넌트를 모두 알려줘","projectPath":"./project"}' | jq
 ```
 
 ---
 
 ## 🧠 파이프라인 개요 (LangGraph)
 
-1. **`load_filtered`**: `data/filtered_ast.json` 로드
+1. **`load_filtered`**: 요청별 생성된 `filtered_ast.json` 로드
 2. **`decide_files`**: 질문과 간략 AST로 **확대할 파일 결정**(LLM or 데모)
 3. **`get_details`**: tree-sitter로 **상세 AST 생성**
 4. **`prune_ast`**: LLM 계획 수집 → 서버에서 **keep_full/slice/paths/drop** 적용 (컨텍스트 창 고려)
